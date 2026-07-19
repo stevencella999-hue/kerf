@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Kerf — Laser Engraving Image Prep</title>
+<meta name="description" content="Upload an image, pick your material and laser, download an engraving-ready file. Runs entirely in your browser." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true">
+      <path d="M4 26 L16 6 L28 26 Z" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linejoin="round"/>
+      <line x1="10" y1="26" x2="22" y2="26" stroke="var(--accent-2)" stroke-width="2.4" stroke-linecap="round"/>
+    </svg>
+    <span class="brand-name">Kerf</span>
+    <span class="brand-tag">laser image prep</span>
+  </div>
+  <div class="topbar-steps" aria-hidden="true">
+    <span class="step-dot active" data-step="1">1 · Upload</span>
+    <span class="step-dot" data-step="2">2 · Tune</span>
+    <span class="step-dot" data-step="3">3 · Download</span>
+  </div>
+  <a class="repo-link" href="https://github.com/" target="_blank" rel="noopener">View source</a>
+</header>
+
+<main class="layout">
+
+  <!-- LEFT: upload + material shelf -->
+  <section class="panel upload-panel">
+    <h2 class="panel-title">Upload</h2>
+
+    <div class="mode-toggle" role="tablist" aria-label="Processing mode">
+      <button class="mode-btn active" data-mode="single" role="tab" aria-selected="true">Single</button>
+      <button class="mode-btn" data-mode="batch" role="tab" aria-selected="false">Batch</button>
+    </div>
+
+    <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Upload image">
+      <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp" hidden />
+      <input type="file" id="fileInputBatch" accept="image/png,image/jpeg,image/webp" multiple hidden />
+      <svg viewBox="0 0 48 48" width="34" height="34" class="dz-icon" aria-hidden="true">
+        <path d="M24 6 L24 30 M14 16 L24 6 L34 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="8" y="34" width="32" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="2.5"/>
+      </svg>
+      <p class="dz-text"><strong>Drop your image here</strong><br/>or click to browse</p>
+      <p class="dz-sub">PNG, JPG, WEBP — processed locally, nothing uploaded</p>
+    </div>
+
+    <ul id="batchList" class="batch-list" hidden></ul>
+
+    <h2 class="panel-title panel-title-spaced">Material</h2>
+    <div id="materialShelf" class="material-shelf" role="listbox" aria-label="Material"></div>
+    <p id="materialNote" class="material-note"></p>
+  </section>
+
+  <!-- CENTER: settings -->
+  <section class="panel settings-panel">
+    <h2 class="panel-title">Engraving Settings</h2>
+
+    <div class="field-row" id="dimsRow">
+      <label class="field">
+        <span>Width</span>
+        <input type="number" id="widthIn" min="0.1" step="0.1" value="4" />
+      </label>
+      <label class="field">
+        <span>Height</span>
+        <input type="number" id="heightIn" min="0.1" step="0.1" value="4" />
+      </label>
+      <label class="field field-narrow">
+        <span>Unit</span>
+        <select id="unitSel">
+          <option value="in">in</option>
+          <option value="mm">mm</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="field-row" id="batchDimsRow" hidden>
+      <label class="field">
+        <span>Longer side</span>
+        <input type="number" id="longSideIn" min="0.1" step="0.1" value="4" />
+      </label>
+      <label class="field field-narrow">
+        <span>Unit</span>
+        <select id="unitSelBatch">
+          <option value="in">in</option>
+          <option value="mm">mm</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="field-row">
+      <label class="field">
+        <span>DPI</span>
+        <input type="number" id="dpiIn" min="50" max="1200" step="1" value="254" />
+      </label>
+      <div class="field-hint">254 DPI is a common starting point for most lasers.</div>
+    </div>
+
+    <div class="field-row">
+      <label class="field">
+        <span>Dithering</span>
+        <select id="ditherSel">
+          <option value="floyd">Floyd–Steinberg</option>
+          <option value="atkinson">Atkinson</option>
+          <option value="ordered">Ordered (Bayer 8×8)</option>
+        </select>
+      </label>
+      <label class="checkbox-field">
+        <input type="checkbox" id="ditherDisable" />
+        <span>Disable dithering</span>
+      </label>
+    </div>
+
+    <h3 class="panel-subtitle">Laser</h3>
+    <div class="field-row">
+      <label class="field">
+        <span>Laser type</span>
+        <select id="laserSel">
+          <option value="co2">CO2</option>
+          <option value="diode">Diode</option>
+          <option value="fiber">Fiber</option>
+          <option value="galvo">Galvo</option>
+          <option value="uv">UV</option>
+        </select>
+      </label>
+    </div>
+    <div class="field-row readout-row">
+      <label class="field field-narrow"><span>Speed (mm/s)</span><input type="number" id="speedIn" /></label>
+      <label class="field field-narrow"><span>Power min (%)</span><input type="number" id="powerMinIn" /></label>
+      <label class="field field-narrow"><span>Power max (%)</span><input type="number" id="powerMaxIn" /></label>
+      <label class="field field-narrow" id="freqField"><span>Frequency (kHz)</span><input type="number" id="freqIn" /></label>
+      <label class="field field-narrow" id="qField"><span>Q-Pulse (µs)</span><input type="number" id="qIn" /></label>
+    </div>
+    <p class="field-hint">Presets are starting points only — always confirm on a scrap tile.</p>
+
+    <button id="processBtn" class="btn-primary" disabled>
+      <span class="btn-label">Prepare image</span>
+      <span class="btn-spinner" hidden></span>
+    </button>
+  </section>
+
+  <!-- RIGHT: preview + export -->
+  <section class="panel preview-panel">
+    <h2 class="panel-title">Preview</h2>
+
+    <div id="previewStage" class="preview-stage">
+      <div class="preview-empty">
+        <p>Your engraving-ready preview will appear here.</p>
+      </div>
+      <div id="compareWrap" class="compare-wrap" hidden>
+        <img id="afterImg" class="compare-img" alt="Processed preview" />
+        <div id="beforeClip" class="before-clip">
+          <img id="beforeImg" class="compare-img" alt="Original image" />
+        </div>
+        <div id="compareHandle" class="compare-handle" aria-hidden="true"></div>
+        <div class="laser-head" id="laserHead" aria-hidden="true"></div>
+      </div>
+    </div>
+    <p class="preview-caption">Drag to compare · approximation only — real results vary by machine and material batch.</p>
+
+    <div id="exportPanel" class="export-panel" hidden>
+      <h3 class="panel-subtitle">Download</h3>
+      <div class="export-grid">
+        <button class="export-btn" data-fmt="png"><strong>Image (PNG)</strong><span>Standard image file</span></button>
+        <button class="export-btn" data-fmt="bmp24"><strong>BMP (24-bit)</strong><span>Uncompressed color bitmap</span></button>
+        <button class="export-btn" data-fmt="bmp1"><strong>BMP (1-bit)</strong><span>Black &amp; white bitmap</span></button>
+        <button class="export-btn" data-fmt="lbrn2"><strong>LightBurn (.lbrn2)</strong><span>Ready-to-use laser project</span></button>
+      </div>
+      <button id="downloadAllBtn" class="btn-secondary" hidden>Download all as PNGs</button>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <p>Kerf runs entirely in your browser — no image ever leaves your device. MIT licensed, built for makers.</p>
+</footer>
+
+<script src="js/materials.js"></script>
+<script src="js/laser-presets.js"></script>
+<script src="js/dither.js"></script>
+<script src="js/imaging.js"></script>
+<script src="js/export.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
